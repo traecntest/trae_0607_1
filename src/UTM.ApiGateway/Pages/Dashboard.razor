@@ -184,7 +184,7 @@
                                         </span>
                                     </td>
                                     <td>@drone.CurrentPosition.Altitude.ToString("F1") m</td>
-                                    <td>@(drone.Velocity.Speed).ToString("F1") m/s</td>
+                                    <td>@drone.Velocity.Speed.ToString("F1") m/s</td>
                                 </tr>
                             }
                             @if (!RecentDrones.Any())

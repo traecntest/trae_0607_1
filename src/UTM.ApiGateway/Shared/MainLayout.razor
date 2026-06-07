@@ -1,32 +1,28 @@
 @inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
+<div class="app-layout">
+    <aside class="app-sidebar">
         <NavMenu />
-    </div>
+    </aside>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="/swagger" target="_blank" class="ml-auto">API 文档</a>
-            <span class="status-indicator">
-                <span class="status-dot status-online"></span>
-                系统运行中
-            </span>
-        </div>
+    <main class="app-main">
+        <header class="app-header">
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <h6 class="mb-0 fw-semibold text-muted">低空经济与无人机交通管理系统</h6>
+                <div class="d-flex align-items-center gap-3">
+                    <a href="/swagger" target="_blank" class="text-decoration-none text-muted small">
+                        <i class="bi bi-book"></i> API 文档
+                    </a>
+                    <span class="status-indicator">
+                        <span class="status-dot status-online"></span>
+                        <span class="small">系统运行中</span>
+                    </span>
+                </div>
+            </div>
+        </header>
 
-        <article class="content px-4">
+        <section class="app-content">
             @Body
-        </article>
+        </section>
     </main>
-</div>
-
-<div id="blazor-error-ui">
-    <environment include="Staging,Production">
-        An error has occurred. This application may no longer respond until reloaded.
-    </environment>
-    <environment include="Development">
-        An unhandled exception has occurred. See browser dev tools for details.
-    </environment>
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
 </div>
