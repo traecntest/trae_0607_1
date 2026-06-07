@@ -18,7 +18,7 @@
                 <option value="Medium">中</option>
                 <option value="Low">低</option>
             </select>
-            <button class="btn btn-primary" @onclick="RefreshData">
+            <button class="btn btn-primary" @onclick="RefreshDataAsync">
                 <i class="bi bi-arrow-clockwise"></i> 刷新
             </button>
         </div>
@@ -202,17 +202,15 @@
         }
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        RefreshData();
+        await RefreshDataAsync();
     }
 
-    private void RefreshData()
+    private async Task RefreshDataAsync()
     {
         var allDrones = DroneStateStore.GetAllDrones().ToList();
-        var task = ConflictDetector.DetectConflictsAsync(allDrones);
-        task.Wait();
-        AllConflicts = task.Result;
+        AllConflicts = await ConflictDetector.DetectConflictsAsync(allDrones);
         LastUpdate = DateTime.Now;
     }
 

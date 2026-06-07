@@ -136,7 +136,7 @@
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>相关冲突</span>
-                        <button class="btn btn-sm btn-outline-primary" @onclick="RefreshData">
+                        <button class="btn btn-sm btn-outline-primary" @onclick="RefreshDataAsync">
                             <i class="bi bi-arrow-clockwise"></i> 刷新
                         </button>
                     </div>
@@ -257,9 +257,9 @@
                     Drone.Velocity.Up * Drone.Velocity.Up)
         : 0;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        RefreshData();
+        await RefreshDataAsync();
     }
 
     private void GoBack()
@@ -267,16 +267,14 @@
         NavigationManager.NavigateTo("/drones");
     }
 
-    private void RefreshData()
+    private async Task RefreshDataAsync()
     {
         Drone = DroneStateStore.GetDrone(Id);
 
         if (Drone != null)
         {
             var allDrones = DroneStateStore.GetAllDrones().ToList();
-            var task = ConflictDetector.DetectDroneConflictsAsync(Drone, allDrones);
-            task.Wait();
-            DroneConflicts = task.Result;
+            DroneConflicts = await ConflictDetector.DetectDroneConflictsAsync(Drone, allDrones);
 
             Predicted30s = PredictPosition(Drone, 30);
             Predicted60s = PredictPosition(Drone, 60);

@@ -28,7 +28,7 @@
                 <option value="5">5 秒</option>
                 <option value="10">10 秒</option>
             </select>
-            <button class="btn btn-primary" @onclick="RefreshData">
+            <button class="btn btn-primary" @onclick="RefreshDataAsync">
                 <i class="bi bi-arrow-clockwise"></i> 刷新
             </button>
         </div>
@@ -163,9 +163,9 @@
     private double AvgAltitude => AllDrones.Any() ? AllDrones.Average(d => d.CurrentPosition.Altitude) : 0;
     private double AvgSpeed => AllDrones.Any() ? AllDrones.Average(d => GetSpeed(d.Velocity)) : 0;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        RefreshData();
+        await RefreshDataAsync();
         if (AutoRefresh)
         {
             StartAutoRefresh();
@@ -175,9 +175,9 @@
     private void StartAutoRefresh()
     {
         _refreshTimer = new Timer(
-            _ => InvokeAsync(() =>
+            async _ => await InvokeAsync(async () =>
             {
-                RefreshData();
+                await RefreshDataAsync();
                 StateHasChanged();
             }),
             null,
@@ -191,12 +191,10 @@
         _refreshTimer = null;
     }
 
-    private void RefreshData()
+    private async Task RefreshDataAsync()
     {
         AllDrones = DroneStateStore.GetAllDrones().ToList();
-        var task = ConflictDetector.DetectConflictsAsync(AllDrones);
-        task.Wait();
-        Conflicts = task.Result;
+        Conflicts = await ConflictDetector.DetectConflictsAsync(AllDrones);
         LastUpdate = DateTime.Now;
     }
 

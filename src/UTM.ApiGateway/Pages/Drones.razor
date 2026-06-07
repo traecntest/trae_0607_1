@@ -10,22 +10,22 @@
             <h1 class="page-title mb-0">无人机管理</h1>
             <p class="page-subtitle mb-0">管理和监控所有无人机</p>
         </div>
-        <div class="d-flex gap-2">
-            <div class="input-group" style="width: 250px;">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" class="form-control" placeholder="搜索无人机..." @bind="SearchText" />
+            <div class="d-flex gap-2">
+                <div class="input-group" style="width: 250px;">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" placeholder="搜索无人机..." @bind="SearchText" @bind:event="oninput" />
+                </div>
+                <select class="form-select" style="width: 150px;" @bind="StatusFilter" @bind:event="onchange">
+                    <option value="">全部状态</option>
+                    <option value="Flying">飞行中</option>
+                    <option value="Hovering">悬停</option>
+                    <option value="Idle">待机</option>
+                    <option value="Landed">已降落</option>
+                </select>
+                <button class="btn btn-primary" @onclick="RefreshData">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                </button>
             </div>
-            <select class="form-select" style="width: 150px;" @bind="StatusFilter">
-                <option value="">全部状态</option>
-                <option value="Flying">飞行中</option>
-                <option value="Hovering">悬停</option>
-                <option value="Idle">待机</option>
-                <option value="Landed">已降落</option>
-            </select>
-            <button class="btn btn-primary" @onclick="RefreshData">
-                <i class="bi bi-arrow-clockwise"></i> 刷新
-            </button>
-        </div>
     </div>
 
     <div class="card">
