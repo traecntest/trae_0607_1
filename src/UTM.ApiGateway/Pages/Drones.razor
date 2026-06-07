@@ -1,0 +1,170 @@
+@page "/drones"
+@inject IDroneStateStore DroneStateStore
+@inject NavigationManager NavigationManager
+
+<PageTitle>无人机管理 - UTM 管理系统</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title mb-0">无人机管理</h1>
+            <p class="page-subtitle mb-0">管理和监控所有无人机</p>
+        </div>
+        <div class="d-flex gap-2">
+            <div class="input-group" style="width: 250px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" placeholder="搜索无人机..." @bind="SearchText" />
+            </div>
+            <select class="form-select" style="width: 150px;" @bind="StatusFilter">
+                <option value="">全部状态</option>
+                <option value="Flying">飞行中</option>
+                <option value="Hovering">悬停</option>
+                <option value="Idle">待机</option>
+                <option value="Landed">已降落</option>
+            </select>
+            <button class="btn btn-primary" @onclick="RefreshData">
+                <i class="bi bi-arrow-clockwise"></i> 刷新
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>无人机列表</span>
+            <span class="text-muted">共 @FilteredDrones.Count 架</span>
+        </div>
+        <div class="card-body p-0">
+            @if (FilteredDrones.Any())
+            {
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>无人机ID</th>
+                            <th>名称</th>
+                            <th>类型</th>
+                            <th>状态</th>
+                            <th>经度</th>
+                            <th>纬度</th>
+                            <th>高度</th>
+                            <th>速度</th>
+                                    <th>电量</th>
+                                    <th>最后更新</th>
+                                    <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var drone in FilteredDrones.OrderBy(d => d.Id))
+                        {
+                            <tr>
+                                <td>
+                                    <a href="/drones/@drone.Id" class="text-decoration-none fw-medium">
+                                        @drone.Id
+                                    </a>
+                                </td>
+                                <td>@drone.Name</td>
+                                <td>@drone.Type</td>
+                                <td>
+                                    <span class="badge badge-@drone.Status.ToString().ToLower()">
+                                        @GetStatusText(drone.Status)
+                                    </span>
+                                </td>
+                                <td>@drone.CurrentPosition.Longitude.ToString("F6")</td>
+                                <td>@drone.CurrentPosition.Latitude.ToString("F6")</td>
+                                <td>@drone.CurrentPosition.Altitude.ToString("F1") m</td>
+                                <td>@GetSpeed(drone.Velocity).ToString("F1") m/s</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2" style="width: 100px;">
+                                        <div class="progress flex-grow-1" style="height: 6px;">
+                                            <div class="progress-bar @GetBatteryClass(drone.BatteryLevel)" style="width:@drone.BatteryLevel%"></div>
+                                        </div>
+                                        <span class="small">@drone.BatteryLevel.ToString("F0")%</span>
+                                    </div>
+                                </td>
+                                <td class="text-muted small">
+                                    @drone.LastUpdateTime.ToString("HH:mm:ss")
+                                </td>
+                                <td>
+                                    <a href="/drones/@drone.Id" class="btn btn-sm btn-outline-primary">
+                                        详情
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <div class="empty-state-icon">🛩️</div>
+                    <p>暂无无人机数据</p>
+                    <p class="small text-muted">请先启动模拟器或添加无人机</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string SearchText = string.Empty;
+    private string StatusFilter = string.Empty;
+    private List<Drone> AllDrones = new();
+
+    private List<Drone> FilteredDrones
+    {
+        get
+        {
+            var query = AllDrones.AsEnumerable();
+            if (!string.IsNullOrWhiteSpace(SearchText))
+            {
+                query = query.Where(d =>
+                    d.Id.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                    d.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+            }
+            if (!string.IsNullOrWhiteSpace(StatusFilter))
+            {
+                var status = Enum.Parse<DroneStatus>(StatusFilter);
+                query = query.Where(d => d.Status == status);
+            }
+            return query.ToList();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        RefreshData();
+    }
+
+    private void RefreshData()
+    {
+        AllDrones = DroneStateStore.GetAllDrones().ToList();
+    }
+
+    private static string GetStatusText(DroneStatus status)
+    {
+        return status switch
+        {
+            DroneStatus.Idle => "待机",
+            DroneStatus.Flying => "飞行中",
+            DroneStatus.Hovering => "悬停",
+            DroneStatus.Landing => "降落中",
+            DroneStatus.Landed => "已降落",
+            DroneStatus.Emergency => "紧急",
+            _ => status.ToString()
+        };
+    }
+
+    private static double GetSpeed(Velocity3D velocity)
+    {
+        return Math.Sqrt(velocity.East * velocity.East +
+                        velocity.North * velocity.North +
+                        velocity.Up * velocity.Up);
+    }
+
+    private static string GetBatteryClass(double battery)
+    {
+        if (battery > 50) return "bg-success";
+        if (battery > 20) return "bg-warning";
+        return "bg-danger";
+    }
+}

@@ -1,0 +1,335 @@
+@page "/"
+@inject IDroneStateStore DroneStateStore
+@inject IConflictDetector ConflictDetector
+@inject DroneSimulator DroneSimulator
+@inject ITrajectoryService TrajectoryService
+
+<PageTitle>仪表盘 - UTM 管理系统</PageTitle>
+
+<div class="container-fluid">
+    <h1 class="page-title">系统概览</h1>
+    <p class="page-subtitle">实时监控无人机运行状态与冲突告警</p>
+
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stat-card stat-blue">
+                <div class="stat-value">@TotalDrones</div>
+                <div class="stat-label">无人机总数</div>
+                <div class="stat-icon">🛩️</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stat-card stat-green">
+                <div class="stat-value">@FlyingDrones</div>
+                <div class="stat-label">飞行中</div>
+                <div class="stat-icon">✈️</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stat-card stat-orange">
+                <div class="stat-value">@ActiveConflicts</div>
+                <div class="stat-label">活动冲突</div>
+                <div class="stat-icon">⚠️</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="stat-card stat-cyan">
+                <div class="stat-value">@SystemStatus</div>
+                <div class="stat-label">系统状态</div>
+                <div class="stat-icon">💚</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>无人机状态分布</span>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="RefreshData">
+                        <i class="bi bi-arrow-clockwise"></i> 刷新
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 col-md-3 mb-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h3 text-success">@FlyingDrones</div>
+                                <div class="small text-muted">飞行中</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 mb-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h3 text-warning">@HoveringDrones</div>
+                                <div class="small text-muted">悬停</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 mb-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h3 text-secondary">@IdleDrones</div>
+                                <div class="small text-muted">待机</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 mb-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h3 text-muted">@LandedDrones</div>
+                                <div class="small text-muted">已降落</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <h6 class="mb-3">飞行状态比例</h6>
+                        <div class="progress mb-2" style="height: 24px;">
+                            @if (TotalDrones > 0)
+                            {
+                                <div class="progress-bar bg-success" style="width:@(FlyingDrones * 100 / TotalDrones)%">
+                                    @(FlyingDrones * 100 / TotalDrones)% 飞行
+                                </div>
+                                <div class="progress-bar bg-warning" style="width:@(HoveringDrones * 100 / TotalDrones)%">
+                                    @(HoveringDrones * 100 / TotalDrones)% 悬停
+                                </div>
+                                <div class="progress-bar bg-secondary" style="width:@(IdleDrones * 100 / TotalDrones)%">
+                                    @(IdleDrones * 100 / TotalDrones)% 待机
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    冲突告警统计
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>危急</span>
+                            <span class="badge bg-danger">@CriticalConflicts</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-danger" style="width:@CriticalPercent%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>高</span>
+                            <span class="badge bg-warning text-dark">@HighConflicts</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-warning" style="width:@HighPercent%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>中</span>
+                            <span class="badge bg-info">@MediumConflicts</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-info" style="width:@MediumPercent%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>低</span>
+                            <span class="badge bg-secondary">@LowConflicts</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-secondary" style="width:@LowPercent%"></div>
+                        </div>
+                    </div>
+
+                    <hr />
+                    <div class="text-center">
+                        <div class="h4 mb-0">@ActiveConflicts</div>
+                        <div class="text-muted small">活动冲突总数</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>最近活动的无人机</span>
+                    <a href="/drones" class="btn btn-sm btn-link">查看全部</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>状态</th>
+                                <th>高度</th>
+                                <th>速度</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var drone in RecentDrones)
+                            {
+                                <tr>
+                                    <td>
+                                        <a href="/drones/@drone.Id" class="text-decoration-none">
+                                            @drone.Id
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-@drone.Status.ToString().ToLower()">
+                                            @drone.Status
+                                        </span>
+                                    </td>
+                                    <td>@drone.CurrentPosition.Altitude.ToString("F1") m</td>
+                                    <td>@(drone.Velocity.Speed).ToString("F1") m/s</td>
+                                </tr>
+                            }
+                            @if (!RecentDrones.Any())
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        暂无无人机数据
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>最新冲突告警</span>
+                    <a href="/conflicts" class="btn btn-sm btn-link">查看全部</a>
+                </div>
+                <div class="card-body">
+                    @if (RecentConflicts.Any())
+                    {
+                        @foreach (var conflict in RecentConflicts.Take(5))
+                        {
+                            <div class="alert alert-@conflict.Severity.ToString().ToLower() mb-2 p-2">
+                                <div class="d-flex justify-content-between">
+                                    <strong>@string.Join(" ↔ ", conflict.DroneIds)</strong>
+                                    <span class="badge bg-@(conflict.Severity == ConflictSeverity.Critical ? "danger" : conflict.Severity == ConflictSeverity.High ? "warning" : "secondary")">
+                                        @conflict.Severity
+                                    </span>
+                                </div>
+                                <small>
+                                    TCPA: @conflict.TimeToCollision.ToString("F1")s | 
+                                    DCPA: @conflict.MinimumDistance.ToString("F1")m
+                                </small>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <div class="empty-state-icon">✅</div>
+                            <p>当前无冲突告警</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    系统信息
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="detail-item">
+                                <div class="detail-label">模拟无人机</div>
+                                <div class="detail-value">@DroneSimulator.DroneCount 架</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="detail-item">
+                                <div class="detail-label">安全距离</div>
+                                <div class="detail-value">@ConflictDetector.SafetyDistance m</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="detail-item">
+                                <div class="detail-label">预测范围</div>
+                                <div class="detail-value">@ConflictDetector.PredictionHorizon s</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="detail-item">
+                                <div class="detail-label">最后更新</div>
+                                <div class="detail-value">@LastUpdate.ToString("HH:mm:ss")</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int TotalDrones;
+    private int FlyingDrones;
+    private int HoveringDrones;
+    private int IdleDrones;
+    private int LandedDrones;
+    private int ActiveConflicts;
+    private int CriticalConflicts;
+    private int HighConflicts;
+    private int MediumConflicts;
+    private int LowConflicts;
+    private string SystemStatus = "运行中";
+    private List<Drone> RecentDrones = new();
+    private List<ConflictDetectedEvent> RecentConflicts = new();
+    private DateTime LastUpdate = DateTime.Now;
+
+    protected override void OnInitialized()
+    {
+        RefreshData();
+    }
+
+    private void RefreshData()
+    {
+        var allDrones = DroneStateStore.GetAllDrones().ToList();
+        TotalDrones = allDrones.Count;
+        FlyingDrones = allDrones.Count(d => d.Status == DroneStatus.Flying);
+        HoveringDrones = allDrones.Count(d => d.Status == DroneStatus.Hovering);
+        IdleDrones = allDrones.Count(d => d.Status == DroneStatus.Idle);
+        LandedDrones = allDrones.Count(d => d.Status == DroneStatus.Landed);
+
+        var conflictsTask = ConflictDetector.DetectConflictsAsync(allDrones);
+        conflictsTask.Wait();
+        var conflicts = conflictsTask.Result;
+        ActiveConflicts = conflicts.Count;
+        CriticalConflicts = conflicts.Count(c => c.Severity == ConflictSeverity.Critical);
+        HighConflicts = conflicts.Count(c => c.Severity == ConflictSeverity.High);
+        MediumConflicts = conflicts.Count(c => c.Severity == ConflictSeverity.Medium);
+        LowConflicts = conflicts.Count(c => c.Severity == ConflictSeverity.Low);
+
+        RecentDrones = allDrones
+            .OrderByDescending(d => d.LastUpdateTime)
+            .Take(8)
+            .ToList();
+
+        RecentConflicts = conflicts
+            .OrderBy(c => c.TimeToCollision)
+            .ToList();
+
+        LastUpdate = DateTime.Now;
+    }
+
+    private double CriticalPercent => ActiveConflicts > 0 ? (double)CriticalConflicts / ActiveConflicts * 100 : 0;
+    private double HighPercent => ActiveConflicts > 0 ? (double)HighConflicts / ActiveConflicts * 100 : 0;
+    private double MediumPercent => ActiveConflicts > 0 ? (double)MediumConflicts / ActiveConflicts * 100 : 0;
+    private double LowPercent => ActiveConflicts > 0 ? (double)LowConflicts / ActiveConflicts * 100 : 0;
+}

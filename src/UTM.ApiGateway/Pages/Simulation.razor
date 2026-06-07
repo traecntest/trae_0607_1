@@ -1,0 +1,294 @@
+@page "/simulation"
+@inject DroneSimulator DroneSimulator
+@inject IDroneStateStore DroneStateStore
+@inject IConfiguration Configuration
+
+<PageTitle>模拟器控制 - UTM 管理系统</PageTitle>
+
+<div class="container-fluid">
+    <h1 class="page-title">模拟器控制</h1>
+    <p class="page-subtitle">管理和配置无人机模拟环境</p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    模拟环境配置
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">无人机数量</label>
+                        <input type="number" class="form-control" @bind="DroneCount" min="1" max="1000" />
+                        <div class="form-text">设置模拟无人机的数量（1-1000）</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">中心经度</label>
+                            <input type="number" step="0.0001" class="form-control" @bind="CenterLongitude" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">中心纬度</label>
+                            <input type="number" step="0.0001" class="form-control" @bind="CenterLatitude" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">基础高度 (米)</label>
+                        <input type="number" step="10" class="form-control" @bind="BaseAltitude" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">模拟时间间隔 (毫秒)</label>
+                        <input type="number" class="form-control" @bind="TickIntervalMs" min="10" max="5000" />
+                        <div class="form-text">数值越小，模拟运行越快</div>
+                    </div>
+                    <button class="btn btn-primary w-100" @onclick="ResetSimulation">
+                        <i class="bi bi-arrow-repeat"></i> 重置模拟
+                    </button>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    快捷操作
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-success" @onclick="() => AddDrones(10)">
+                            <i class="bi bi-plus-circle"></i> 添加 10 架无人机
+                        </button>
+                        <button class="btn btn-outline-success" @onclick="() => AddDrones(50)">
+                            <i class="bi bi-plus-circle"></i> 添加 50 架无人机
+                        </button>
+                        <button class="btn btn-outline-success" @onclick="() => AddDrones(100)">
+                            <i class="bi bi-plus-circle"></i> 添加 100 架无人机
+                        </button>
+                        <hr />
+                        <button class="btn btn-outline-warning" @onclick="RandomizeVelocities">
+                            <i class="bi bi-shuffle"></i> 随机化速度
+                        </button>
+                        <button class="btn btn-outline-info" @onclick="SetAllFlying">
+                            <i class="bi bi-play-circle"></i> 设置全部飞行
+                        </button>
+                        <button class="btn btn-outline-secondary" @onclick="SetAllLanded">
+                            <i class="bi bi-stop-circle"></i> 设置全部降落
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>模拟器状态</span>
+                    <span class="badge @(IsRunning ? "bg-success" : "bg-secondary")">
+                        @(IsRunning ? "运行中" : "已停止")
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h3 text-primary">@DroneSimulator.DroneCount</div>
+                                <div class="small text-muted">模拟无人机</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h3 text-success">@StateStoreCount</div>
+                                <div class="small text-muted">状态存储中</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-item">
+                        <div class="detail-label">中心经度</div>
+                        <div class="detail-value">@CenterLongitude°</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">中心纬度</div>
+                        <div class="detail-value">@CenterLatitude°</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">基础高度</div>
+                        <div class="detail-value">@BaseAltitude m</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">模拟步长</div>
+                        <div class="detail-value">@TickIntervalMs ms</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    状态分布
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>飞行中</span>
+                            <span class="text-success">@FlyingCount 架</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" style="width:@FlyingPercent%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>悬停</span>
+                            <span class="text-warning">@HoveringCount 架</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-warning" style="width:@HoveringPercent%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>待机/地面</span>
+                            <span class="text-secondary">@IdleCount 架</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-secondary" style="width:@IdlePercent%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    模拟数据预览
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>状态</th>
+                                <th>高度</th>
+                                <th>速度</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var drone in PreviewDrones)
+                            {
+                                <tr>
+                                    <td class="small">@drone.Id</td>
+                                    <td>
+                                        <span class="badge badge-@drone.Status.ToString().ToLower()" style="font-size: 0.65rem;">
+                                            @drone.Status
+                                        </span>
+                                    </td>
+                                    <td class="small">@drone.CurrentPosition.Altitude.ToString("F0") m</td>
+                                    <td class="small">@GetSpeed(drone.Velocity).ToString("F1") m/s</td>
+                                </tr>
+                            }
+                            @if (!PreviewDrones.Any())
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3 small">
+                                        暂无数据
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer text-center">
+                    <button class="btn btn-sm btn-outline-primary" @onclick="RefreshData">
+                        <i class="bi bi-arrow-clockwise"></i> 刷新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int DroneCount = 50;
+    private double CenterLongitude = 116.3972;
+    private double CenterLatitude = 39.9075;
+    private double BaseAltitude = 100.0;
+    private int TickIntervalMs = 100;
+    private bool IsRunning = true;
+
+    private int StateStoreCount => DroneStateStore.Count;
+    private List<Drone> PreviewDrones => DroneStateStore.GetAllDrones().Take(10).ToList();
+
+    private int FlyingCount => DroneStateStore.GetAllDrones().Count(d => d.Status == DroneStatus.Flying);
+    private int HoveringCount => DroneStateStore.GetAllDrones().Count(d => d.Status == DroneStatus.Hovering);
+    private int IdleCount => DroneStateStore.GetAllDrones().Count(d => d.Status == DroneStatus.Idle || d.Status == DroneStatus.Landed);
+
+    private int TotalCount => DroneStateStore.Count;
+    private double FlyingPercent => TotalCount > 0 ? (double)FlyingCount / TotalCount * 100 : 0;
+    private double HoveringPercent => TotalCount > 0 ? (double)HoveringCount / TotalCount * 100 : 0;
+    private double IdlePercent => TotalCount > 0 ? (double)IdleCount / TotalCount * 100 : 0;
+
+    protected override void OnInitialized()
+    {
+        DroneCount = Configuration.GetValue("Simulation:DroneCount", 50);
+        CenterLongitude = Configuration.GetValue("Simulation:CenterLongitude", 116.3972);
+        CenterLatitude = Configuration.GetValue("Simulation:CenterLatitude", 39.9075);
+        BaseAltitude = Configuration.GetValue("Simulation:BaseAltitude", 100.0);
+        TickIntervalMs = Configuration.GetValue("Simulation:IntervalMs", 100);
+    }
+
+    private void ResetSimulation()
+    {
+        DroneSimulator.ClearAll();
+        DroneSimulator.AddDrones(DroneCount, CenterLongitude, CenterLatitude, BaseAltitude);
+        RefreshData();
+    }
+
+    private void AddDrones(int count)
+    {
+        DroneSimulator.AddDrones(count, CenterLongitude, CenterLatitude, BaseAltitude);
+        RefreshData();
+    }
+
+    private void RandomizeVelocities()
+    {
+        var random = new Random();
+        var allDrones = DroneStateStore.GetAllDrones().ToList();
+        foreach (var drone in allDrones)
+        {
+            var velocity = new Velocity3D(
+                east: (random.NextDouble() - 0.5) * 30,
+                north: (random.NextDouble() - 0.5) * 30,
+                up: (random.NextDouble() - 0.5) * 5);
+            DroneSimulator.SetVelocity(drone.Id, velocity);
+        }
+        RefreshData();
+    }
+
+    private void SetAllFlying()
+    {
+        var allDrones = DroneStateStore.GetAllDrones().ToList();
+        foreach (var drone in allDrones)
+        {
+            DroneSimulator.SetDroneStatus(drone.Id, DroneStatus.Flying);
+        }
+        RefreshData();
+    }
+
+    private void SetAllLanded()
+    {
+        var allDrones = DroneStateStore.GetAllDrones().ToList();
+        foreach (var drone in allDrones)
+        {
+            DroneSimulator.SetDroneStatus(drone.Id, DroneStatus.Landed);
+        }
+        RefreshData();
+    }
+
+    private void RefreshData()
+    {
+        StateHasChanged();
+    }
+
+    private static double GetSpeed(Velocity3D velocity)
+    {
+        return Math.Sqrt(velocity.East * velocity.East +
+                        velocity.North * velocity.North +
+                        velocity.Up * velocity.Up);
+    }
+}

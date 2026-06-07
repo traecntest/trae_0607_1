@@ -1,0 +1,336 @@
+@page "/drones/{Id}"
+@inject IDroneStateStore DroneStateStore
+@inject IConflictDetector ConflictDetector
+@inject NavigationManager NavigationManager
+
+<PageTitle>无人机详情 - UTM 管理系统</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex align-items-center mb-4">
+        <button class="btn btn-outline-secondary me-3" @onclick="GoBack">
+            <i class="bi bi-arrow-left"></i> 返回
+        </button>
+        <div>
+            <h1 class="page-title mb-0">@Drone?.Id</h1>
+            <p class="page-subtitle mb-0">无人机详细信息</p>
+        </div>
+    </div>
+
+    @if (Drone == null)
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="text-muted">
+                    <i class="bi bi-x-circle" style="font-size: 3rem;"></i>
+                    <p class="mt-3">未找到无人机 "@Id"</p>
+                    <button class="btn btn-primary" @onclick="GoBack">
+                        返回列表
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">基本信息</div>
+                    <div class="card-body">
+                        <div class="detail-item">
+                            <div class="detail-label">无人机ID</div>
+                            <div class="detail-value">@Drone.Id</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">名称</div>
+                            <div class="detail-value">@Drone.Name</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">类型</div>
+                            <div class="detail-value">@Drone.Type</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">状态</div>
+                            <div class="detail-value">
+                                <span class="badge badge-@Drone.Status.ToString().ToLower()">
+                                    @GetStatusText(Drone.Status)
+                                </span>
+                            </div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">安全半径</div>
+                            <div class="detail-value">@Drone.SafetyRadius m</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">最大速度</div>
+                            <div class="detail-value">@Drone.MaxSpeed m/s</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">最大高度</div>
+                            <div class="detail-value">@Drone.MaxAltitude m</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">当前位置</div>
+                    <div class="card-body">
+                        <div class="detail-item">
+                            <div class="detail-label">经度</div>
+                            <div class="detail-value">@Drone.CurrentPosition.Longitude.ToString("F8")°</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">纬度</div>
+                            <div class="detail-value">@Drone.CurrentPosition.Latitude.ToString("F8")°</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">高度</div>
+                            <div class="detail-value">@Drone.CurrentPosition.Altitude.ToString("F2") m</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">速度信息</div>
+                    <div class="card-body">
+                        <div class="detail-item">
+                            <div class="detail-label">东向</div>
+                            <div class="detail-value">@Drone.Velocity.East.ToString("F2") m/s</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">北向</div>
+                            <div class="detail-value">@Drone.Velocity.North.ToString("F2") m/s</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">垂向</div>
+                            <div class="detail-value">@Drone.Velocity.Up.ToString("F2") m/s</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">总速度</div>
+                            <div class="detail-value fw-bold">@Speed.ToString("F2") m/s</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">电池信息</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>电量</span>
+                                <span class="fw-medium">@Drone.BatteryLevel.ToString("F1")%</span>
+                            </div>
+                            <div class="progress" style="height: 12px;">
+                                <div class="progress-bar @GetBatteryClass(Drone.BatteryLevel)" 
+                                     style="width:@Drone.BatteryLevel%"></div>
+                            </div>
+                        </div>
+                        <div class="text-muted small">
+                            预计剩余飞行时间：@(Drone.BatteryLevel * 1.5).ToString("F0") 分钟
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>相关冲突</span>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="RefreshData">
+                            <i class="bi bi-arrow-clockwise"></i> 刷新
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        @if (DroneConflicts.Any())
+                        {
+                            @foreach (var conflict in DroneConflicts)
+                            {
+                                <div class="alert alert-@conflict.Severity.ToString().ToLower() mb-2">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>
+                                                与 @string.Join("、", conflict.DroneIds.Where(id => id != Drone.Id))
+                                            </strong>
+                                            <div class="small mt-1">
+                                                TCPA: @conflict.TimeToCollision.ToString("F1") 秒 |
+                                                DCPA: @conflict.MinimumDistance.ToString("F1") 米
+                                            </div>
+                                        </div>
+                                        <span class="badge bg-@(conflict.Severity == ConflictSeverity.Critical ? "danger" : conflict.Severity == ConflictSeverity.High ? "warning" : "secondary")">
+                                            @GetSeverityText(conflict.Severity)
+                                        </span>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="empty-state py-4">
+                                <div class="empty-state-icon" style="font-size: 2rem;">✅</div>
+                                <p class="mb-0">当前无相关冲突</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">轨迹预测</div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">基于当前速度预测未来位置</p>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="bg-light rounded p-3 text-center">
+                                    <div class="text-muted small">30 秒后</div>
+                                    @if (Predicted30s.HasValue)
+                                    {
+                                        <div class="mt-2">
+                                            <div>高度: @Predicted30s.Value.Altitude.ToString("F1") m</div>
+                                            <div class="text-muted small" style="font-size: 0.7rem;">
+                                                @Predicted30s.Value.Longitude.ToString("F6"), 
+                                                @Predicted30s.Value.Latitude.ToString("F6")
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="bg-light rounded p-3 text-center">
+                                    <div class="text-muted small">60 秒后</div>
+                                    @if (Predicted60s.HasValue)
+                                    {
+                                        <div class="mt-2">
+                                            <div>高度: @Predicted60s.Value.Altitude.ToString("F1") m</div>
+                                            <div class="text-muted small" style="font-size: 0.7rem;">
+                                                @Predicted60s.Value.Longitude.ToString("F6"), 
+                                                @Predicted60s.Value.Latitude.ToString("F6")
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="bg-light rounded p-3 text-center">
+                                    <div class="text-muted small">120 秒后</div>
+                                    @if (Predicted120s.HasValue)
+                                    {
+                                        <div class="mt-2">
+                                            <div>高度: @Predicted120s.Value.Altitude.ToString("F1") m</div>
+                                            <div class="text-muted small" style="font-size: 0.7rem;">
+                                                @Predicted120s.Value.Longitude.ToString("F6"), 
+                                                @Predicted120s.Value.Latitude.ToString("F6")
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">操作记录</div>
+                    <div class="card-body">
+                        <div class="detail-item">
+                            <div class="detail-label">最后更新</div>
+                            <div class="detail-value">@Drone.LastUpdateTime.ToString("yyyy-MM-dd HH:mm:ss")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = string.Empty;
+
+    private Drone? Drone;
+    private List<ConflictDetectedEvent> DroneConflicts = new();
+    private Position3D? Predicted30s;
+    private Position3D? Predicted60s;
+    private Position3D? Predicted120s;
+
+    private double Speed => Drone != null
+        ? Math.Sqrt(Drone.Velocity.East * Drone.Velocity.East +
+                    Drone.Velocity.North * Drone.Velocity.North +
+                    Drone.Velocity.Up * Drone.Velocity.Up)
+        : 0;
+
+    protected override void OnParametersSet()
+    {
+        RefreshData();
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/drones");
+    }
+
+    private void RefreshData()
+    {
+        Drone = DroneStateStore.GetDrone(Id);
+
+        if (Drone != null)
+        {
+            var allDrones = DroneStateStore.GetAllDrones().ToList();
+            var task = ConflictDetector.DetectDroneConflictsAsync(Drone, allDrones);
+            task.Wait();
+            DroneConflicts = task.Result;
+
+            Predicted30s = PredictPosition(Drone, 30);
+            Predicted60s = PredictPosition(Drone, 60);
+            Predicted120s = PredictPosition(Drone, 120);
+        }
+    }
+
+    private static Position3D PredictPosition(Drone drone, double seconds)
+    {
+        var latRad = drone.CurrentPosition.Latitude * Math.PI / 180.0;
+        var cosLat = Math.Cos(latRad);
+        var earthRadius = 6371000.0;
+
+        var deltaLon = drone.Velocity.East * seconds / (earthRadius * cosLat) * 180.0 / Math.PI;
+        var deltaLat = drone.Velocity.North * seconds / earthRadius * 180.0 / Math.PI;
+        var deltaAlt = drone.Velocity.Up * seconds;
+
+        return new Position3D(
+            drone.CurrentPosition.Longitude + deltaLon,
+            drone.CurrentPosition.Latitude + deltaLat,
+            drone.CurrentPosition.Altitude + deltaAlt);
+    }
+
+    private static string GetStatusText(DroneStatus status)
+    {
+        return status switch
+        {
+            DroneStatus.Idle => "待机",
+            DroneStatus.Flying => "飞行中",
+            DroneStatus.Hovering => "悬停",
+            DroneStatus.Landing => "降落中",
+            DroneStatus.Landed => "已降落",
+            DroneStatus.TakingOff => "起飞中",
+            DroneStatus.Emergency => "紧急",
+            _ => status.ToString()
+        };
+    }
+
+    private static string GetSeverityText(ConflictSeverity severity)
+    {
+        return severity switch
+        {
+            ConflictSeverity.Low => "低",
+            ConflictSeverity.Medium => "中",
+            ConflictSeverity.High => "高",
+            ConflictSeverity.Critical => "危急",
+            _ => severity.ToString()
+        };
+    }
+
+    private static string GetBatteryClass(double battery)
+    {
+        if (battery > 50) return "bg-success";
+        if (battery > 20) return "bg-warning";
+        return "bg-danger";
+    }
+}

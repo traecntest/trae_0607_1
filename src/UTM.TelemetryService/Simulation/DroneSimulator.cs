@@ -237,6 +237,28 @@ public class DroneSimulator
         }
     }
 
+    /// <summary>
+    /// 清除所有模拟无人机
+    /// </summary>
+    public void ClearAll()
+    {
+        lock (_lock)
+        {
+            _drones.Clear();
+        }
+    }
+
+    /// <summary>
+    /// 获取所有无人机ID
+    /// </summary>
+    public IEnumerable<string> GetAllDroneIds()
+    {
+        lock (_lock)
+        {
+            return _drones.Keys.ToList();
+        }
+    }
+
     private class SimulatedDrone
     {
         public string DroneId = string.Empty;
