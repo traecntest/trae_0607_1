@@ -74,9 +74,11 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseCors("AllowAll");
 app.UseStaticFiles();
+app.UseRouting();
+app.UseCors("AllowAll");
 app.UseAuthorization();
+
 app.MapControllers();
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
